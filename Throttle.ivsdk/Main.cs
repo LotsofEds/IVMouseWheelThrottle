@@ -102,8 +102,10 @@ namespace Throttle
                     playerVehicle.BrakePedal = ((float)throttleAmt / 100);
                 else if (FreeWheelNoGas && !NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && !NativeControls.IsGameKeyPressed(0, GameKey.MoveBackward))
                 {
-                    playerVehicle.GasPedal = 0.00000000000000000001f;
-                    playerVehicle.BrakePedal = 0.0125f;
+                    playerVehicle.GasPedal = (float)(0.005 / playerVehicle.Handling.DriveForce);
+                    if (playerVehicle.GasPedal < 0.01f)
+                        playerVehicle.GasPedal = 0.01f;
+                    playerVehicle.BrakePedal = (float)(0.01 / playerVehicle.Handling.BrakeForce);
                 }
             }
         }
