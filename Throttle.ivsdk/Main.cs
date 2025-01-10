@@ -100,7 +100,14 @@ namespace Throttle
                     playerVehicle.GasPedal = -((float)throttleAmt / 100);
                 else if (NativeControls.IsGameKeyPressed(0, GameKey.MoveBackward) && playerVehicle.BrakePedal > 0)
                     playerVehicle.BrakePedal = ((float)throttleAmt / 100);
-                else if (FreeWheelNoGas && !NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && !NativeControls.IsGameKeyPressed(0, GameKey.MoveBackward))
+                else if (FreeWheelNoGas && !NativeControls.IsUsingController() && !NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && !NativeControls.IsGameKeyPressed(0, GameKey.MoveBackward))
+                {
+                    playerVehicle.GasPedal = (float)(0.005 / playerVehicle.Handling.DriveForce);
+                    if (playerVehicle.GasPedal < 0.01f)
+                        playerVehicle.GasPedal = 0.01f;
+                    playerVehicle.BrakePedal = (float)(0.01 / playerVehicle.Handling.BrakeForce);
+                }
+                else if (FreeWheelNoGas && NativeControls.IsUsingController() && !NativeControls.IsGameKeyPressed(0, GameKey.Attack) && !NativeControls.IsGameKeyPressed(0, GameKey.Aim))
                 {
                     playerVehicle.GasPedal = (float)(0.005 / playerVehicle.Handling.DriveForce);
                     if (playerVehicle.GasPedal < 0.01f)
@@ -117,7 +124,7 @@ namespace Throttle
                 return;
             if (IVCutsceneMgr.IsRunning())
                 return;
-            if (!(IS_PAUSE_MENU_ACTIVE() || IS_SCREEN_FADING_OUT() || IS_SCREEN_FADED_OUT()) && !(IS_MESSAGE_BEING_DISPLAYED()))
+            if (!(IS_PAUSE_MENU_ACTIVE() || IS_SCREEN_FADING_OUT() || IS_SCREEN_FADED_OUT()))
             {
                 ImGuiIV.PushStyleVar(eImGuiStyleVar.WindowBorderSize, -15f);
                 ImGuiIV.PushStyleColor(eImGuiCol.FrameBg, Color.FromArgb(100, Color.Black));
