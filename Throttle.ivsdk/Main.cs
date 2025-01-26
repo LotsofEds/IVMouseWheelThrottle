@@ -19,19 +19,40 @@ namespace Throttle
         public static int throttleInc;
         public static Vector2 BarOffset;
         public static bool FreeWheelNoGas;
-        public static bool dontCrash;
-        public static bool allowDrawing;
+        public static bool BasicTransmission;
+
+        private static bool dontCrash;
+        private static bool allowDrawing;
+        private static bool isKeyPressed;
+        private static bool inReverse;
         public static IVPed PlayerPed { get; private set; }
         private static IVVehicle playerVehicle;
-        public static int throttleAmt;
+        private static int throttleAmt;
         private static int msWhl;
 
         public Main()
         {
             Initialized += Main_Initialized;
             Tick += new EventHandler(this.MainTick);
+            KeyDown += Main_KeyDown;
+            KeyUp += Main_KeyUp;
             ProcessAutomobile += Main_ProcessAutomobile;
             OnImGuiRendering += Main_OnImGuiRendering;
+        }
+
+
+        private void Main_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (NativeControls.IsGameKeyPressed(0, GameKey.Crouch) && !isKeyPressed && BasicTransmission)
+            {
+                inReverse = !inReverse;
+                isKeyPressed = true;
+            }
+        }
+        private void Main_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (!NativeControls.IsGameKeyPressed(0, GameKey.Crouch) && isKeyPressed)
+                isKeyPressed = false;
         }
 
         private void Main_Initialized(object sender, EventArgs e)
@@ -46,6 +67,7 @@ namespace Throttle
             BarOffset = settings.GetVector2("Throttle", "Offset", new Vector2(100f, 90f));
             throttleInc = settings.GetInteger("Throttle", "Sensitivity", 5);
             FreeWheelNoGas = settings.GetBoolean("Throttle", "FreeWheelNoGas", true);
+            BasicTransmission = settings.GetBoolean("Throttle", "BasicTransmission", true);
         }
         private void MainTick(object sender, EventArgs e)
         {
@@ -92,15 +114,34 @@ namespace Throttle
 
             if (playerVehicle != null && PlayerPed.IsInVehicle())
             {
-                if (NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && playerVehicle.BrakePedal <= 0)
-                    playerVehicle.GasPedal = ((float)throttleAmt / 100);
-                else if (NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && playerVehicle.BrakePedal > 0)
-                    playerVehicle.BrakePedal = ((float)throttleAmt / 100);
-                else if (NativeControls.IsGameKeyPressed(0, GameKey.MoveBackward) && playerVehicle.BrakePedal <= 0)
-                    playerVehicle.GasPedal = -((float)throttleAmt / 100);
-                else if (NativeControls.IsGameKeyPressed(0, GameKey.MoveBackward) && playerVehicle.BrakePedal > 0)
-                    playerVehicle.BrakePedal = ((float)throttleAmt / 100);
-                else if (FreeWheelNoGas && !NativeControls.IsUsingController() && !NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && !NativeControls.IsGameKeyPressed(0, GameKey.MoveBackward))
+                if (BasicTransmission)
+                {
+                    if (NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && !inReverse)
+                        playerVehicle.GasPedal = ((float)throttleAmt / 100);
+
+                    else if (NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && inReverse)
+                    {
+                        playerVehicle.GasPedal = -((float)throttleAmt / 100);
+                        playerVehicle.BrakePedal = 0;
+                    }
+                    else if (NativeControls.IsGameKeyPressed(0, GameKey.MoveBackward))
+                    {
+                        playerVehicle.BrakePedal = ((float)throttleAmt / 100);
+                        playerVehicle.GasPedal = 0;
+                    }
+                }
+                else
+                {
+                    if (NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && playerVehicle.BrakePedal <= 0)
+                        playerVehicle.GasPedal = ((float)throttleAmt / 100);
+                    else if (NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && playerVehicle.BrakePedal > 0)
+                        playerVehicle.BrakePedal = ((float)throttleAmt / 100);
+                    else if (NativeControls.IsGameKeyPressed(0, GameKey.MoveBackward) && playerVehicle.BrakePedal <= 0)
+                        playerVehicle.GasPedal = -((float)throttleAmt / 100);
+                    else if (NativeControls.IsGameKeyPressed(0, GameKey.MoveBackward) && playerVehicle.BrakePedal > 0)
+                        playerVehicle.BrakePedal = ((float)throttleAmt / 100);
+                }
+                if (FreeWheelNoGas && !NativeControls.IsUsingController() && !NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && !NativeControls.IsGameKeyPressed(0, GameKey.MoveBackward))
                 {
                     playerVehicle.GasPedal = (float)(0.005 / playerVehicle.Handling.DriveForce);
                     if (playerVehicle.GasPedal < 0.01f)
@@ -132,6 +173,10 @@ namespace Throttle
                 ImGuiIV.SetNextWindowBgAlpha(0.0f);
                 if (ImGuiIV.Begin("##ThrottleBar", eImGuiWindowFlags.NoTitleBar | eImGuiWindowFlags.AlwaysAutoResize | eImGuiWindowFlags.NoMove, eImGuiWindowFlagsEx.NoMouseEnable))
                 {
+                    if (inReverse)
+                        ImGuiIV.Text("R");
+                    else
+                        ImGuiIV.Text("D");
                     ImGuiIV.ProgressBar(throttleAmt / 100f, new Vector2(100f, 20f), " ");
                     RectangleF rect = IVGame.GetRadarRectangle();
                     ImGuiIV.SetWindowPos(new Vector2(rect.Right, rect.Y) + BarOffset);
