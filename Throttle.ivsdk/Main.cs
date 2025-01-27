@@ -20,6 +20,8 @@ namespace Throttle
         public static Vector2 BarOffset;
         public static bool FreeWheelNoGas;
         public static bool BasicTransmission;
+        public static Keys ShiftKey;
+        public static ControllerButton controllerKey;
 
         private static bool dontCrash;
         private static bool allowDrawing;
@@ -34,25 +36,8 @@ namespace Throttle
         {
             Initialized += Main_Initialized;
             Tick += new EventHandler(this.MainTick);
-            KeyDown += Main_KeyDown;
-            KeyUp += Main_KeyUp;
             ProcessAutomobile += Main_ProcessAutomobile;
             OnImGuiRendering += Main_OnImGuiRendering;
-        }
-
-
-        private void Main_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (NativeControls.IsGameKeyPressed(0, GameKey.Crouch) && !isKeyPressed && BasicTransmission)
-            {
-                inReverse = !inReverse;
-                isKeyPressed = true;
-            }
-        }
-        private void Main_KeyUp(object sender, KeyEventArgs e)
-        {
-            if (!NativeControls.IsGameKeyPressed(0, GameKey.Crouch) && isKeyPressed)
-                isKeyPressed = false;
         }
 
         private void Main_Initialized(object sender, EventArgs e)
@@ -68,6 +53,8 @@ namespace Throttle
             throttleInc = settings.GetInteger("Throttle", "Sensitivity", 5);
             FreeWheelNoGas = settings.GetBoolean("Throttle", "FreeWheelNoGas", true);
             BasicTransmission = settings.GetBoolean("Throttle", "BasicTransmission", true);
+            ShiftKey = settings.GetKey("Throttle", "KBShiftKey", Keys.LControlKey);
+            controllerKey = (ControllerButton)settings.GetInteger("Throttle", "ControllerShiftKey", (int)ControllerButton.BUTTON_B);
         }
         private void MainTick(object sender, EventArgs e)
         {
@@ -114,6 +101,15 @@ namespace Throttle
 
             if (playerVehicle != null && PlayerPed.IsInVehicle())
             {
+                if ((IVGame.IsKeyPressed(ShiftKey) || (IS_USING_CONTROLLER() && NativeControls.IsControllerButtonPressed(0, controllerKey))) && !isKeyPressed && BasicTransmission)
+                {
+                    inReverse = !inReverse;
+                    isKeyPressed = true;
+                }
+
+                if (!IVGame.IsKeyPressed(ShiftKey) && !NativeControls.IsControllerButtonPressed(0, controllerKey) && isKeyPressed)
+                    isKeyPressed = false;
+
                 if (BasicTransmission)
                 {
                     if (NativeControls.IsGameKeyPressed(0, GameKey.MoveForward) && !inReverse)
